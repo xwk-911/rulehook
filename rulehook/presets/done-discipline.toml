@@ -1,0 +1,24 @@
+# rulehook preset: done-discipline
+# The agent may not claim completion until quality gates are met.
+
+[settings]
+provider = "anthropic"
+fail_open = true
+
+[[rules]]
+id = "done-tests-ran"
+rule = "Before declaring a coding task complete, the agent must have actually run the project's test suite (or stated explicitly that no tests exist) in this session."
+events = ["stop"]
+action = "remind"
+
+[[rules]]
+id = "done-no-todo-left"
+rule = "Before finishing, the agent must not leave newly introduced TODO/FIXME placeholders in code it wrote, unless the user asked for stubs."
+events = ["stop"]
+action = "remind"
+
+[[rules]]
+id = "done-summarize-changes"
+rule = "The final message of a coding task must summarize what files were changed and how to verify the change."
+events = ["stop"]
+action = "warn"

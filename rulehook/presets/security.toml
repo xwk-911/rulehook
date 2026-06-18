@@ -1,0 +1,41 @@
+# rulehook preset: security
+# Baseline protections for any coding-agent session.
+
+[settings]
+provider = "anthropic"
+fail_open = true
+timeout = 25
+
+[[rules]]
+id = "sec-no-destructive-rm"
+rule = "Never run destructive recursive deletion (rm -rf and equivalents) outside an explicitly scoped temp/build directory."
+events = ["pre_tool_use"]
+tools = "Bash"
+action = "deny"
+pattern = "rm\\s+(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)\\s"
+pattern_only = true
+
+[[rules]]
+id = "sec-no-secret-access"
+rule = "Never read, print, copy, commit, or exfiltrate secrets: .env files, private keys, API tokens, cloud credentials, or password stores."
+events = ["pre_tool_use"]
+tools = "Bash|Read|Grep|Glob"
+action = "deny"
+pattern = "\\.env|secret|credential|id_rsa|id_ed25519|\\.pem|token|aws/credentials|\\.netrc"
+
+[[rules]]
+id = "sec-no-curl-pipe-sh"
+rule = "Never pipe content downloaded from the internet directly into a shell interpreter."
+events = ["pre_tool_use"]
+tools = "Bash"
+action = "deny"
+pattern = "(curl|wget)[^|;&]*\\|\\s*(ba|z|da)?sh"
+pattern_only = true
+
+[[rules]]
+id = "sec-no-secret-in-output"
+rule = "If a command's output contains credentials or API keys, they must not be echoed onward, written to files, or sent over the network."
+events = ["post_tool_use"]
+tools = "Bash"
+action = "remind"
+pattern = "AKIA[A-Z0-9]{16}|ghp_[A-Za-z0-9]{36}|sk-[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY"

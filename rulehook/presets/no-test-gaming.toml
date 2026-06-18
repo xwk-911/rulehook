@@ -1,0 +1,24 @@
+# Demo rules file: a *semantic* rule that no regex/permission rule could express.
+# Editing a test file is a legitimate action — the violation lives in the INTENT.
+# Validate:  rulehook check --rules examples/no-test-gaming.toml
+# Dry-run:   RULEHOOK_MOCK=1 rulehook test --rules examples/no-test-gaming.toml ...
+
+[settings]
+# claude-cli / codex-cli judge via your existing CLI login (subscription, no API key).
+# Swap to "anthropic" / "openai" to use an API key instead.
+provider = "claude-cli"
+model = "claude-haiku-4-5"    # judge model for the live verdict
+fail_open = true
+timeout = 60                  # a CLI judge spawns a process; give it headroom
+cache = true
+
+# --- The whole point: catch "make the test pass by gutting the test" --------
+# `pattern` is only a cheap scope (test files / the usual gaming tokens); the
+# LLM judge reads the actual diff and decides whether it's a real fix or gaming.
+[[rules]]
+id = "no-test-gaming"
+rule = "Never make a failing test pass by skipping, weakening, deleting, or commenting it out, by loosening its assertions, or by lowering coverage thresholds or using --no-verify. Fix the underlying code instead."
+events = ["pre_tool_use"]
+tools = "Edit|Write|MultiEdit|Bash|apply_patch"
+action = "deny"
+pattern = 'tests?/|_test\.|\.spec\.|skip|xfail|\.mark\.|no-verify|coverage|assert\s+True'

@@ -1,0 +1,40 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging/build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Local rulehook/agent configuration generated during demos
+.rulehook/
+.claude/settings.local.json
+examples/*/.rulehook/
+examples/*/.claude/
+examples/*/.codex/
+examples/*/.cursor/
+
+# Local logs and audit output
+*.log
+audit.jsonl
+.rulehook/audit.jsonl
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/
+
+.claude/

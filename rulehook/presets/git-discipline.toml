@@ -1,0 +1,38 @@
+# rulehook preset: git-discipline
+# Keep the agent from making irreversible or sloppy git moves.
+
+[settings]
+provider = "anthropic"
+fail_open = true
+
+[[rules]]
+id = "git-no-force-push"
+rule = "Never force-push (git push --force / -f) to shared branches such as main, master, develop, or release branches."
+events = ["pre_tool_use"]
+tools = "Bash"
+action = "deny"
+pattern = "git\\s+push[^\\n]*(--force|-f)\\b"
+
+[[rules]]
+id = "git-no-hard-reset"
+rule = "Never run git reset --hard or git clean -fd without the user explicitly asking for it in this conversation."
+events = ["pre_tool_use"]
+tools = "Bash"
+action = "deny"
+pattern = "git\\s+(reset\\s+--hard|clean\\s+-[a-z]*f)"
+
+[[rules]]
+id = "git-no-amend-pushed"
+rule = "Do not amend or rebase commits that have already been pushed to a remote."
+events = ["pre_tool_use"]
+tools = "Bash"
+action = "remind"
+pattern = "git\\s+(commit[^\\n]*--amend|rebase)"
+
+[[rules]]
+id = "git-commit-message-quality"
+rule = "Commit messages must be descriptive: no placeholder messages like 'wip', 'fix', 'update', or 'changes'."
+events = ["pre_tool_use"]
+tools = "Bash"
+action = "remind"
+pattern = "git\\s+commit"
