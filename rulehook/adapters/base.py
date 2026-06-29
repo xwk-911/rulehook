@@ -9,6 +9,9 @@ the per-platform modules only express their documented differences.
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import sys
 from typing import Optional, Tuple
 
 from ..engine import AgentEvent, Verdict
@@ -127,6 +130,19 @@ def _pre_tool_deny(reason: str) -> dict:
             "permissionDecisionReason": reason,
         }
     }
+
+
+def rulehook_executable() -> str:
+    """Return the command path hook configs should use to call rulehook."""
+    exe = shutil.which("rulehook")
+    if not exe:
+        invoked = os.path.abspath(sys.argv[0]) if sys.argv and sys.argv[0] else ""
+        if os.path.isfile(invoked) and os.path.basename(invoked).startswith("rulehook"):
+            exe = invoked
+    exe = exe or "rulehook"
+    if " " in exe:
+        exe = f'"{exe}"'
+    return exe
 
 
 def emit(result: Tuple[dict, int]) -> int:

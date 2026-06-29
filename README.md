@@ -78,6 +78,32 @@ That installs command hooks for Claude Code, Codex, and Cursor:
 - Codex: `.codex/hooks.json`
 - Cursor: `.cursor/hooks.json`
 
+Codex command hooks include `UserPromptSubmit`, so rulehook can block a prompt
+before the model runs. This is still a command hook, not a native `type:
+"prompt"` hook. Codex command hooks require `codex-cli >= 0.142.0`; older
+0.139.x builds may accept the install step but not load `.codex/hooks.json`.
+Run `codex update` or `npm install -g @openai/codex@latest` before relying on
+Codex enforcement.
+
+For Codex-only natural-language enforcement without an API key, set the judge
+provider to `codex-cli`:
+
+```toml
+[settings]
+provider = "codex-cli"
+
+[[rules]]
+id = "semantic-codex-rule"
+rule = "Never execute a shell command that prints production secrets."
+events = ["pre_tool_use"]
+tools = "Bash"
+action = "deny"
+```
+
+Codex will run rulehook as a command hook, and rulehook will call a nested
+read-only `codex exec` judge to decide whether the natural-language rule is
+violated.
+
 To install native prompt hooks where the platform supports them:
 
 ```bash

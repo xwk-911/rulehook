@@ -17,7 +17,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 from typing import Optional, Tuple
 
 from ..engine import AgentEvent, Verdict
@@ -44,10 +43,7 @@ def render(event: AgentEvent, verdict: Verdict) -> Tuple[dict, int]:
 
 
 def _hook_command(rules_path: Optional[str]) -> str:
-    exe = shutil.which("rulehook") or "rulehook"
-    if " " in exe:
-        exe = f'"{exe}"'
-    cmd = f'{exe} hook --target claude-code'
+    cmd = f'{base.rulehook_executable()} hook --target claude-code'
     if rules_path:
         cmd += f' --rules "{os.path.abspath(rules_path)}"'
     return cmd

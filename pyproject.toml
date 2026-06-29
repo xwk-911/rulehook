@@ -34,3 +34,12 @@ include = ["rulehook*"]
 
 [tool.setuptools.package-data]
 rulehook = ["presets/*.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["rulehook"]
+
+[tool.coverage.report]
+fail_under = 95

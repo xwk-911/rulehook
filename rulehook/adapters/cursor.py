@@ -10,11 +10,11 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 from typing import Any, Optional, Tuple
 
 from ..engine import AgentEvent, Verdict
 from ..rules import RuleSet
+from . import base
 from .native_prompt import specs_for_ruleset
 
 PLATFORM = "cursor"
@@ -76,8 +76,6 @@ def parse(payload: dict) -> Optional[AgentEvent]:
 
 
 def _tool_fields(name: Any, payload: dict) -> tuple[Optional[str], Optional[dict], Any]:
-    if "tool_name" in payload or "tool_input" in payload:
-        return payload.get("tool_name"), payload.get("tool_input"), payload.get("tool_response")
     if name == "beforeShellExecution":
         return "Bash", {"command": payload.get("command", "")}, None
     if name == "afterShellExecution":
@@ -94,6 +92,8 @@ def _tool_fields(name: Any, payload: dict) -> tuple[Optional[str], Optional[dict
         return "Read", {"file_path": payload.get("file_path"), "content": payload.get("content")}, None
     if name == "afterFileEdit":
         return "Edit", {"file_path": payload.get("file_path"), "edits": payload.get("edits")}, None
+    if "tool_name" in payload or "tool_input" in payload:
+        return payload.get("tool_name"), payload.get("tool_input"), payload.get("tool_response")
     return payload.get("tool") or payload.get("tool_name"), payload.get("args") or payload.get("tool_input"), payload.get("result")
 
 
@@ -158,10 +158,7 @@ def _deny(reason: str) -> dict:
 
 
 def _hook_command(rules_path: Optional[str]) -> str:
-    exe = shutil.which("rulehook") or "rulehook"
-    if " " in exe:
-        exe = f'"{exe}"'
-    cmd = f'{exe} hook --target cursor'
+    cmd = f'{base.rulehook_executable()} hook --target cursor'
     if rules_path:
         cmd += f' --rules "{os.path.abspath(rules_path)}"'
     return cmd

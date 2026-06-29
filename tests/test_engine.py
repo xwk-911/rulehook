@@ -4,7 +4,8 @@ import tempfile
 import unittest
 from unittest import mock
 
-from rulehook.engine import AgentEvent, evaluate
+from rulehook.engine import AgentEvent, Violation, evaluate
+from rulehook.judge import JudgeResult
 from rulehook.rules import Rule, RuleSet, Settings
 
 
@@ -96,6 +97,55 @@ class TestEngine(unittest.TestCase):
         with open(log, encoding="utf-8") as fh:
             record = json.loads(fh.readline())
         self.assertEqual(record["violations"][0]["rule_id"], "rmrf")
+
+    def test_action_text_includes_outputs_prompts_and_final_messages(self):
+        ev = AgentEvent(
+            platform="codex",
+            event="post_tool_use",
+            tool_name="Bash",
+            tool_input={"command": "echo hi"},
+            tool_response={"stdout": "hi"},
+            prompt="please run it",
+            last_message="done",
+        )
+        text = ev.action_text()
+        self.assertIn('"command": "echo hi"', text)
+        self.assertIn('"stdout": "hi"', text)
+        self.assertIn("user_prompt: please run it", text)
+        self.assertIn("assistant_final_message: done", text)
+
+    def test_no_applicable_rules_returns_fail_open_setting(self):
+        rs = ruleset([Rule(id="x", rule="Never X.", events=["stop"])], fail_open=False)
+        v = evaluate(event(event_name="pre_tool_use"), rs)
+        self.assertEqual(v.violations, [])
+        self.assertFalse(v.fail_open)
+
+    def test_unknown_judge_result_ids_are_ignored(self):
+        rs = ruleset([Rule(id="known", rule="Never X.", events=["pre_tool_use"])])
+        with mock.patch("rulehook.engine.judge", return_value=[
+            JudgeResult("unknown", True, "ignored"),
+            JudgeResult("known", True, "matched"),
+        ]):
+            v = evaluate(event(), rs)
+        self.assertEqual([x.rule_id for x in v.violations], ["known"])
+        self.assertEqual(v.violations[0].reason, "matched")
+
+    def test_audit_log_failures_are_ignored(self):
+        rs = ruleset([Rule(id="x", rule="Never X.", events=["pre_tool_use"],
+                           pattern="ls", pattern_only=True)], log_file="/no/such/dir/audit.jsonl")
+        v = evaluate(event(command="ls"), rs)
+        self.assertEqual([x.rule_id for x in v.violations], ["x"])
+
+    def test_verdict_helpers_only_classify_matching_actions(self):
+        from rulehook.engine import Verdict
+
+        v = Verdict(violations=[
+            Violation("d", "D", "deny", ""),
+            Violation("r", "R", "remind", ""),
+            Violation("w", "W", "warn", ""),
+        ])
+        self.assertEqual([x.rule_id for x in v.blocking], ["d", "r"])
+        self.assertEqual([x.rule_id for x in v.warnings], ["w"])
 
 
 if __name__ == "__main__":

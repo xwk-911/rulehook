@@ -148,6 +148,11 @@ def cmd_install(args: argparse.Namespace) -> int:
         notes = getattr(adapter, "POST_INSTALL_NOTES", None)
         if notes:
             print(notes)
+        warning_fn = getattr(adapter, "compatibility_warning", None)
+        if warning_fn:
+            warning = warning_fn()
+            if warning:
+                print(f"[{target}] warning: {warning}", file=sys.stderr)
     return 0
 
 

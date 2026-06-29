@@ -21,6 +21,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 from typing import Optional, Tuple
 
 from ..engine import AgentEvent, Verdict
@@ -44,13 +45,44 @@ def render(event: AgentEvent, verdict: Verdict) -> Tuple[dict, int]:
 
 
 def _hook_command(rules_path: Optional[str]) -> str:
-    exe = shutil.which("rulehook") or "rulehook"
-    if " " in exe:
-        exe = f'"{exe}"'
-    cmd = f'{exe} hook --target codex'
+    cmd = f'{base.rulehook_executable()} hook --target codex'
     if rules_path:
         cmd += f' --rules "{os.path.abspath(rules_path)}"'
     return cmd
+
+
+def _codex_version() -> Optional[tuple[int, int, int]]:
+    exe = shutil.which("codex")
+    if not exe:
+        return None
+    try:
+        proc = subprocess.run(
+            [exe, "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=5,
+        )
+    except Exception:
+        return None
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", proc.stdout + proc.stderr)
+    if not match:
+        return None
+    return tuple(int(part) for part in match.groups())
+
+
+def compatibility_warning() -> Optional[str]:
+    version = _codex_version()
+    if version is None:
+        return "Codex CLI was not found on PATH; install codex before relying on these hooks."
+    if version < (0, 142, 0):
+        found = ".".join(str(part) for part in version)
+        return (
+            f"Codex CLI {found} was found on PATH, but project hooks require "
+            "codex-cli >= 0.142.0. Upgrade with `codex update` or "
+            "`npm install -g @openai/codex@latest`."
+        )
+    return None
 
 
 def _is_rulehook(command: str) -> bool:
@@ -107,9 +139,10 @@ def install(
 
 POST_INSTALL_NOTES = """\
 Codex post-install checklist:
-  1. Project-local hooks only load when the project is trusted
-     (run `codex` in the repo and trust it, or use --trust).
-  2. Non-managed command hooks must be reviewed/trusted on first run.
-  3. Native prompt hooks are not supported; rulehook installs command hooks
+  1. Requires codex-cli >= 0.142.0. Older 0.139.x builds may not load
+     .codex/hooks.json even when the project is trusted.
+  2. Project-local hooks only load when the project is trusted.
+  3. Non-managed command hooks must be reviewed/trusted on first run.
+  4. Native prompt hooks are not supported; rulehook installs command hooks
      and calls its own judge.
 """
